@@ -81,6 +81,7 @@ def test_directmessage_send_fail():
                        timestamp=time,
                        token=token) == json_msg
 
+
 def test_directmessage_send():
     token = 'user_token'
     type = 'directmessage'
@@ -117,12 +118,34 @@ def test_directmessage_all():
                        message=entry,
                        token=token) == json_msg
 
-def test_extract_join_error():
+@pytest.mark.xfail
+def test_encode_fail():
+    assert encode_json(msg_type=1234,
+                       message="What",
+                       token=123456) == False
+
+@pytest.mark.xfail
+def test_encode_directmessage_fail():
+    assert encode_json(msg_type='directmessage',
+                       message='what is this?',
+                       token='1234') == False
+
+@pytest.mark.xfail
+def test_encode_type_fail():
+    assert encode_json(msg_type='something',
+                       message='new',
+                       token='1234') == False
+
+############################################################################
+
+
+def test_extract_error():
     string = json.dumps({"response": {"type": "error",
                                       "message": "An error message will "
                                       "be contained here."}})
     assert extract_json(string) == DataTuple('error','An error message will '
                                              'be contained here.', '')
+
 
 def test_extract_join_ok():
     string = json.dumps({"response": {"type": "ok",
@@ -155,3 +178,14 @@ def test_extract_directmessage_all():
                    "timestamp":"1603167689.3928561"}]
     string = json.dumps({"response": {"type": "ok", "messages": messages}})
     assert extract_json(string) == DataTuple('ok', messages, '')
+
+@pytest.mark.xfail
+def test_extract_notjson():
+    assert extract_json("this is a string") == False
+
+@pytest.mark.xfail
+def test_extract_fail_type():
+    string = json.dumps({"response": {"type": "something",
+                                      "message": "hi"}})
+    assert extract_json(string) == False
+
