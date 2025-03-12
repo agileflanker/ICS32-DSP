@@ -42,20 +42,20 @@ def encode_json(msg_type: str,
                 message: str = None, timestamp=None,
                 token: str = None):
     if msg_type == 'join':
-        if not (username or password):
+        if not username or not password:
             raise ValueError("ProtocolError: No username or password")
         msg = {msg_type: {"username": username,
                           "password": password,
                           "token": ""}}
 
     elif msg_type == 'post' or msg_type == 'bio':
-        if not (token or message):
+        if not token or not message:
             raise ValueError("ProtocolError: No token or message")
         msg = {"token": token, 
                msg_type: {"entry": message, "timestamp": timestamp}}
 
     elif msg_type == 'directmessage':
-        if not (token or message):
+        if not token or not message:
             raise ValueError("ProtocolError: No token or message")
         if username:
             msg = {"token": token,
