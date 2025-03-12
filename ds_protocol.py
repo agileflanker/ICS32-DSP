@@ -21,12 +21,15 @@ def extract_json(json_msg: str) -> DataTuple:
         if type == 'ok':
             if 'token' in response:
                 token = response['token']
+            else:
+                token = ''
             if 'message' in response:
                 message = response['message']
             elif 'messages' in response:
                 message = response['messages']
         elif type == 'error':
             message = response['message']
+            token = ''
 
     except json.JSONDecodeError:
         print("Json cannot be decoded.")
@@ -64,4 +67,4 @@ def encode_json(msg_type: str,
     else:
         raise ValueError("ProtocolError: Invalid message type")
 
-    return msg
+    return json.dumps(msg)

@@ -5,6 +5,32 @@
 import socket
 import ds_protocol
 
+class DirectMessage:
+    def __init__(self, recipient: str = None,
+                 message: str = None,
+                 timestamp: str = None):
+        self.recipient = recipient
+        self.message = message
+        self.timestamp = timestamp
+
+
+class DirectMessenger:
+    def __init__(self, dsuserver=None, username=None, password=None):
+        self.token = None
+		
+    def send(self, message:str, recipient:str) -> bool:
+        # must return true if message successfully sent, false if send failed.
+        pass
+		
+    def retrieve_new(self) -> list:
+        # must return a list of DirectMessage objects containing all new messages
+        pass
+ 
+    def retrieve_all(self) -> list:
+        # must return a list of DirectMessage objects containing all messages
+        pass
+
+
 
 def connect_to_server(server: str = '127.0.0.1', port: int = 3001):
     try:

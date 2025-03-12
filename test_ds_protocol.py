@@ -1,2 +1,126 @@
-import ds_protocol
+from ds_protocol import *
 
+# {"join": {"username": "ohhimark","password": "password123","token":""}}
+def test_encode_join():
+    type = 'join'
+    user = 'ohhimark'
+    pwd = 'password123'
+    json_msg = json.dumps({type: {"username": user,
+                          "password": pwd,
+                          "token": ""}})
+    assert encode_json(msg_type=type,
+                       username=user,
+                       password=pwd) == json_msg
+
+# {"response": {"type": "error", 
+# "message": "An error message will be contained here."}}
+def test_extract_join_error():
+    string = json.dumps({"response": {"type": "error",
+                                      "message": "An error message will "
+                                      "be contained here."}})
+    assert extract_json(string) == DataTuple('error','An error message will '
+                                             'be contained here.', '')
+
+# {"response": {"type": "ok", "message": "", "token": "user_token"}}
+def test_extract_join_ok():
+    string = json.dumps({"response": {"type": "ok",
+                                      "message": "", "token": "user_token"}})
+    assert extract_json(string) == DataTuple('ok', '', 'user_token')
+
+# {"token":"user_token",
+# "post": {"entry": "Hello World!","timestamp": "1603167689.3928561"}}
+def test_encode_post():
+    token = 'user_token'
+    type = 'post'
+    entry = 'Hello World!'
+    time = 1603167689.3928561
+    json_msg = json.dumps({"token": token,
+                           type: {"entry": entry,
+                                  "timestamp": time}})
+    assert encode_json(msg_type=type,
+                       message=entry,
+                       timestamp=time,
+                       token=token) == json_msg
+
+# {"token":"user_token",
+# "bio": {"entry": "Hello World!", "timestamp": "1603167689.3928561"}}
+def test_encode_bio():
+    token = 'user_token'
+    type = 'bio'
+    entry = 'Hello World!'
+    time = 1603167689.3928561
+    json_msg = json.dumps({"token": token,
+                           type: {"entry": entry,
+                                  "timestamp": time}})
+    assert encode_json(msg_type=type,
+                       message=entry,
+                       timestamp=time,
+                       token=token) == json_msg
+
+# {"token":"user_token","directmessage": {"entry": "Hello World!",
+# "recipient":"ohhimark", "timestamp": "1603167689.3928561"}}
+def test_directmessage_send():
+    token = 'user_token'
+    type = 'directmessage'
+    entry = 'Hello World!'
+    user = 'ohhimark'
+    time = 1603167689.3928561
+    json_msg = json.dumps({"token": token,
+                           type: {"entry": entry,
+                                  "recipient": user,
+                                  "timestamp": time}})
+    assert encode_json(msg_type=type,
+                       username=user,
+                       message=entry,
+                       timestamp=time,
+                       token=token) == json_msg
+
+# {"token":"user_token", "directmessage": "new"}
+def test_directmessage_new():
+    token = 'user_token'
+    type = 'directmessage'
+    entry = 'new'
+    json_msg = json.dumps({"token": token,
+                           type: entry})
+    assert encode_json(msg_type=type,
+                       message=entry,
+                       token=token) == json_msg
+
+# {"token":"user_token", "directmessage": "all"}
+def test_directmessage_all():
+    token = 'user_token'
+    type = 'directmessage'
+    entry = 'all'
+    json_msg = json.dumps({"token": token,
+                           type: entry})
+    assert encode_json(msg_type=type,
+                       message=entry,
+                       token=token) == json_msg
+
+# {"response": {"type": "ok", "message": "Direct message sent"}}
+def test_extract_directmessage_send():
+    string = json.dumps({"response": {"type": "ok",
+                                      "message": "Direct message sent"}})
+    assert extract_json(string) == DataTuple('ok', 'Direct message sent', '')
+
+def test_extract_directmessage_new():
+    messages = [{"message":"Are you there?!",
+                 "from":"markb", "timestamp":""},
+                 {"message":"Bro? what happened?",
+                  "from":"thebeemoviescript",
+                  "timestamp":"1603167689.3928561"}]
+    string = json.dumps({"response": {"type": "ok",
+                                      "messages": messages}})
+    assert extract_json(string) == DataTuple('ok', messages, '')
+
+def test_extract_directmessage_all():
+    messages = [{"message":"Are you there?!",
+                 "from":"markb",
+                 "timestamp":"1603167689.3928561"},
+                 {"message":"Yeah I just went to grab some water! Jesus!",
+                  "recipient":"markb",
+                  "timestamp":"1603167699.3928561"},
+                  {"message":"Bzzzzz", "from":"thebeemoviescript",
+                   "timestamp":"1603167689.3928561"}]
+    string = json.dumps({"response": {"type": "ok", "messages": messages}})
+    assert extract_json(string) == DataTuple('ok', messages, '')
