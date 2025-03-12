@@ -25,8 +25,10 @@ def extract_json(json_msg: str) -> DataTuple:
                 token = ''
             if 'message' in response:
                 message = response['message']
-            if 'messages' in response:
+            elif 'messages' in response:
                 message = response['messages']
+            else:
+                raise ValueError("ProtocolError: No message found")
         elif type == 'error':
             message = response['message']
             token = ''
@@ -37,8 +39,6 @@ def extract_json(json_msg: str) -> DataTuple:
         print("Json cannot be decoded.")
     
     return DataTuple(type=type, message=message, token=token)
-
-    
 
 
 def encode_json(msg_type: str,

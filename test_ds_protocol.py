@@ -189,3 +189,8 @@ def test_extract_fail_type():
                                       "message": "hi"}})
     assert extract_json(string) == False
 
+@pytest.mark.xfail
+def test_extract_fail_nomessage():
+    string = json.dumps({"response": {"type": "ok",
+                                      "messager": "hi"}})
+    assert extract_json(string) == False
