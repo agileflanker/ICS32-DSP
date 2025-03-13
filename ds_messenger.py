@@ -12,6 +12,16 @@ class DirectMessage:
         self.recipient = None
         self.message = None
         self.timestamp = None
+    
+    def to_dict(self) -> dict:
+        if self.sender:
+            return {'from': self.sender,
+                    'message': self.message,
+                    'timestamp': self.timestamp}
+        else:
+            return {'recipient': self.recipient,
+                    'message': self.message,
+                    'timestamp': self.timestamp}
 
 
 class DirectMessenger:
@@ -66,7 +76,6 @@ class DirectMessenger:
                                        token=self.token).encode()
         self.client.sendall(json + b'\r\n')
         recv = ds_protocol.extract_json(self.client.recv(4069).strip())
-        print(recv)
         if recv.type == 'ok':
             lines = recv.message
             all_msgs = []
@@ -91,7 +100,6 @@ def join_server(client: socket, username: str, password: str) -> ds_protocol.Dat
         client.sendall(join_msg + b'\r\n')
         recv = client.recv(4096).decode().strip()
         data = ds_protocol.extract_json(recv)
-        print(data)
         return data
 
 def connect_to_server(server):

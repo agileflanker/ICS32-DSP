@@ -114,7 +114,8 @@ class Profile:
         self.password = password    # REQUIRED
         self.bio = ''               # OPTIONAL
         self._posts = []            # OPTIONAL
-        self.messages = []
+        self._friends = []
+        self._messages = []
 
     """
 
@@ -156,6 +157,25 @@ class Profile:
     def get_posts(self) -> list[Post]:
         return self._posts
 
+
+    def save_messages_friends(self, msgs: list) -> None:
+        for dm in msgs:
+            new_dm = dm.to_dict()
+            self._messages.append(new_dm)
+            if dm.sender:
+                if not dm.sender in self._friends:
+                    self._friends.append(dm.sender)
+            else:
+                if not dm.recipient in self._friends:
+                    self._friends.append(dm.recipient)
+    
+    def get_messages(self) -> list:
+        return self._messages
+    
+    def get_friends(self) -> list:
+        return self._friends
+
+
     """
 
     save_profile accepts an existing dsu file to save the current instance of
@@ -170,6 +190,7 @@ class Profile:
 
     """
     def save_profile(self, path: str) -> None:
+        
         p = Path(path)
 
         if p.exists() and p.suffix == '.dsu':
@@ -209,16 +230,17 @@ class Profile:
                 for post_obj in obj['_posts']:
                     post = Post(post_obj['entry'], post_obj['timestamp'])
                     self._posts.append(post)
-                
-                for msg in obj['messages']:
-                    dm = DirectMessage()
-                    if 'recipient' in msg:
-                        dm.recipient = msg['recipient']
+                f_list = []
+                for msg_obj in obj['_messages']:
+                    if 'from' in msg_obj:
+                        if not msg_obj['from'] in f_list:
+                            f_list.append(msg_obj['from'])
                     else:
-                        dm.sender = msg['from']
-                    dm.message = msg['message']
-                    dm.timestamp = msg['timestamp']
-                    self.messages.append(dm)
+                        if not msg_obj['recipient'] in f_list:
+                            f_list.append(msg_obj['recipient'])
+                    self._messages.append(msg_obj)
+                self._friends = f_list
+
                 f.close()
             except Exception as ex:
                 raise DsuProfileError(ex)
