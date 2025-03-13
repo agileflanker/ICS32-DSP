@@ -17,6 +17,7 @@
 import json
 import time
 from pathlib import Path
+from ds_messenger import DirectMessage
 
 
 """
@@ -113,6 +114,7 @@ class Profile:
         self.password = password    # REQUIRED
         self.bio = ''               # OPTIONAL
         self._posts = []            # OPTIONAL
+        self.messages = []
 
     """
 
@@ -207,6 +209,16 @@ class Profile:
                 for post_obj in obj['_posts']:
                     post = Post(post_obj['entry'], post_obj['timestamp'])
                     self._posts.append(post)
+                
+                for msg in obj['messages']:
+                    dm = DirectMessage()
+                    if 'recipient' in msg:
+                        dm.recipient = msg['recipient']
+                    else:
+                        dm.sender = msg['from']
+                    dm.message = msg['message']
+                    dm.timestamp = msg['timestamp']
+                    self.messages.append(dm)
                 f.close()
             except Exception as ex:
                 raise DsuProfileError(ex)
