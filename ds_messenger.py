@@ -4,112 +4,98 @@
 
 import socket
 import ds_protocol
+from collections import namedtuple
 
 class DirectMessage:
-    def __init__(self, recipient: str = None,
-                 message: str = None,
-                 timestamp: str = None):
-        self.recipient = recipient
-        self.message = message
-        self.timestamp = timestamp
+    def __init__(self):
+        self.sender = None
+        self.recipient = None
+        self.message = None
+        self.timestamp = None
 
 
 class DirectMessenger:
+    '''
+    User immediately joins the server provided a username and password
+
+    dsuserver: IP address of the server
+    username: username associated with a profile
+    password: password associated with a profile
+    '''
     def __init__(self, dsuserver=None, username=None, password=None):
         self.token = None
-		
+        self.client = connect_to_server(dsuserver)
+        data = join_server(self.client, username, password)
+        self.token = data.token
+
     def send(self, message:str, recipient:str) -> bool:
-        # must return true if message successfully sent, false if send failed.
-        pass
-		
+        json = ds_protocol.encode_json(msg_type='directmessage',
+                                        username=recipient,
+                                        message=message,
+                                        token=self.token).encode()
+        self.client.sendall(json + b'\r\n')
+        recv = ds_protocol.extract_json(self.client.recv(4096).strip())
+        type = recv.type
+        if type == 'ok':
+            return True
+        else:
+            return False
+
     def retrieve_new(self) -> list:
-        # must return a list of DirectMessage objects containing all new messages
-        pass
+        json = ds_protocol.encode_json(msg_type='directmessage',
+                                        message='new',
+                                        token=self.token).encode()
+        self.client.sendall(json + b'\r\n')
+        recv = ds_protocol.extract_json(self.client.recv(4096).strip())
+        if recv.type == 'ok':
+            lines = recv.message
+            new_msgs = []
+            for line in lines:
+                dm = DirectMessage()
+                dm.sender = line['from']
+                dm.message = line['message']
+                dm.timestamp = line['timestamp']
+                new_msgs.append(dm)
+            return new_msgs
+        else:
+            return recv.message
  
     def retrieve_all(self) -> list:
-        # must return a list of DirectMessage objects containing all messages
-        pass
+        json = ds_protocol.encode_json(msg_type='directmessage',
+                                       message='all',
+                                       token=self.token).encode()
+        self.client.sendall(json + b'\r\n')
+        recv = ds_protocol.extract_json(self.client.recv(4069).strip())
+        print(recv)
+        if recv.type == 'ok':
+            lines = recv.message
+            all_msgs = []
+            for line in lines:
+                dm = DirectMessage()
+                if 'recipient' in line:
+                    dm.recipient = line['recipient']
+                else:
+                    dm.sender = line['from']
+                
+                dm.message = line['message']
+                dm.timestamp = line['timestamp']
+                all_msgs.append(dm)
+            return all_msgs
+        else:
+            return recv.message
 
+def join_server(client: socket, username: str, password: str) -> ds_protocol.DataTuple:
+        join_msg = ds_protocol.encode_json('join',
+                                           username,
+                                           password).encode()
+        client.sendall(join_msg + b'\r\n')
+        recv = client.recv(4096).decode().strip()
+        data = ds_protocol.extract_json(recv)
+        print(data)
+        return data
 
+def connect_to_server(server):
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect((server, 3001))
+    return client
 
-def connect_to_server(server: str = '127.0.0.1', port: int = 3001):
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((server, port))
-        return sock
-    except Exception as e:
-        return False
-
-
-def send(server: str, port: int,
-         username: str, password: str, message: str, bio: str = None):
-    '''
-    The send function joins a ds server and sends a message, bio, or both
-
-    :param server: The ip address for the ICS 32 DS server.
-    :param port: The port where the ICS 32 DS server is accepting connections.
-    :param username: The user name to be assigned to the message.
-    :param password: The password associated with the username.
-    :param message: The message to be sent to the server.
-    :param bio: Optional, a bio for the user.
-    '''
-    if not server or not port:
-        print("Client error")
-        return False
-    if not username or not password:
-        print("No username or password")
-        return False
-
-    client = connect_to_server(server, port)
-    if client is False:
-        print(f"Error communicating with {server} on port {port}")
-        return False
-
-    try:
-        while True:
-            join_msg = ds_protocol.encode_json(msg_type='join',
-                                               username=username,
-                                               password=password)
-            client.sendall(join_msg + b'\r\n')
-
-            recv = ds_protocol.extract_json(client.recv(4096).decode())
-            recv_resp = recv.response
-            recv_msg = recv.message
-
-            print("Received server message:", recv_msg)
-            if recv_resp == "error" or not recv.token:
-                return False
-            else:
-                token = recv.token
-
-            if message:
-                post_msg = ds_protocol.encode_json(msg_type='post',
-                                                   message=message,
-                                                   token=token)
-                client.sendall(post_msg + b'\r\n')
-                recv = ds_protocol.extract_json(client.recv(4096).decode())
-                recv_resp = recv.response
-                recv_msg = recv.message
-                print("Received server message:", recv_msg)
-                if recv_msg == "error":
-                    return False
-            if bio:
-                bio_msg = ds_protocol.encode_json(msg_type='bio',
-                                                  message=bio,
-                                                  token=token)
-                client.sendall(bio_msg + b'\r\n')
-                recv = ds_protocol.extract_json(client.recv(4096).decode())
-                recv_resp = recv.response
-                recv_msg = recv.message
-                print("Received server message:", recv_msg)
-                if recv_resp == "error":
-                    return False
-            client.close()
-            return True
-
-    except ValueError as ve:
-        print("SOME VALUE ERROR", ve)
-        return False
-    except Exception as e:
-        print(f"Error communicating with server {server}: {e}")
-        return False
