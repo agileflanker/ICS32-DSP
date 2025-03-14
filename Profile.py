@@ -17,8 +17,6 @@
 import json
 import time
 from pathlib import Path
-from ds_messenger import DirectMessage
-
 
 """
 
@@ -159,16 +157,18 @@ class Profile:
 
 
     def save_messages_friends(self, msgs: list) -> None:
-        for dm in msgs:
-            new_dm = dm.to_dict()
-            self._messages.append(new_dm)
-            if dm.sender:
-                if not dm.sender in self._friends:
-                    self._friends.append(dm.sender)
+        for msg in msgs:
+            self._messages.append(msg)
+            if 'from' in msg:
+                self._friends.append(msg['from'])
             else:
-                if not dm.recipient in self._friends:
-                    self._friends.append(dm.recipient)
+                self._friends.append(msg['recipient'])
     
+    def save_friends(self, friend: str):
+        if not friend in self._friends:
+            self._friends.append(friend)
+
+
     def get_messages(self) -> list:
         return self._messages
     
@@ -230,16 +230,9 @@ class Profile:
                 for post_obj in obj['_posts']:
                     post = Post(post_obj['entry'], post_obj['timestamp'])
                     self._posts.append(post)
-                f_list = []
+                self._friends = obj['_friends']
                 for msg_obj in obj['_messages']:
-                    if 'from' in msg_obj:
-                        if not msg_obj['from'] in f_list:
-                            f_list.append(msg_obj['from'])
-                    else:
-                        if not msg_obj['recipient'] in f_list:
-                            f_list.append(msg_obj['recipient'])
                     self._messages.append(msg_obj)
-                self._friends = f_list
 
                 f.close()
             except Exception as ex:
