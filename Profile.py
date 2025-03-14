@@ -156,13 +156,17 @@ class Profile:
         return self._posts
 
 
-    def save_messages_friends(self, msgs: list) -> None:
+    def save_messages(self, msgs: list) -> None:
         for msg in msgs:
             self._messages.append(msg)
             if 'from' in msg:
-                self._friends.append(msg['from'])
+                self.save_friends(msg['from'])
             else:
-                self._friends.append(msg['recipient'])
+                self.save_friends(msg['recipient'])
+
+    def overwrite_messages(self, msgs: list):
+        self._messages = []
+        self.save_messages(msgs)
     
     def save_friends(self, friend: str):
         if not friend in self._friends:
@@ -192,6 +196,7 @@ class Profile:
     def save_profile(self, path: str) -> None:
         
         p = Path(path)
+        p.touch()
 
         if p.exists() and p.suffix == '.dsu':
             try:

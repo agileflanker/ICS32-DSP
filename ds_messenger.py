@@ -13,6 +13,15 @@ class DirectMessage:
         self.message = None
         self.timestamp = None
 
+    def to_dict(self):
+        msg = {}
+        if self.sender:
+            msg['from'] = self.sender
+        else:
+            msg['recipient'] = self.recipient
+        msg['message'] = self.message
+        msg['timestamp'] = self.timestamp
+        return msg
 
 class DirectMessenger:
     '''
@@ -29,9 +38,6 @@ class DirectMessenger:
         self.token = data.token
 
     def send(self, message:str, recipient:str) -> bool:
-        print(self.token)
-        print(message)
-        print(recipient)
         json = ds_protocol.encode_json(msg_type='directmessage',
                                         username=recipient,
                                         message=message,

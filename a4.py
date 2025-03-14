@@ -1,8 +1,10 @@
 import tkinter as tk
-from tkinter import ttk, filedialog
+from tkinter import ttk, filedialog, messagebox
 from typing import Text
+import ds_messenger as dm
+import Profile
 
-
+dbg = "DEBUGGGGGGGGG"
 class Body(tk.Frame):
     def __init__(self, root, recipient_selected_callback=None):
         tk.Frame.__init__(self, root)
@@ -20,10 +22,21 @@ class Body(tk.Frame):
         if self._select_callback is not None:
             self._select_callback(entry)
 
+    def clear_contacts(self):
+        if self._contacts or len(self.posts.get_children()) != 0:
+            self._contacts = []
+            for item in self.posts_tree.get_children():
+                self.posts_tree.delete(item)
+
     def insert_contact(self, contact: str):
-        self._contacts.append(contact)
-        id = len(self._contacts) - 1
-        self._insert_contact_tree(id, contact)
+        if not contact:
+            messagebox.showerror("Invalid Contact", "Invalid contact entered!")
+        elif contact in self._contacts:
+            messagebox.showerror("Contact Exists", "Contact was already added!")
+        else:
+            self._contacts.append(contact)
+            id = len(self._contacts) - 1
+            self._insert_contact_tree(id, contact)
 
     def _insert_contact_tree(self, id, contact: str):
         if len(contact) > 25:
@@ -35,6 +48,9 @@ class Body(tk.Frame):
 
     def insert_contact_message(self, message:str):
         self.entry_editor.insert(1.0, message + '\n', 'entry-left')
+
+    def clear_messages(self):
+        self.entry_editor.delete(1.0, tk.END)
 
     def get_text_entry(self) -> str:
         return self.message_editor.get('1.0', 'end').rstrip()
@@ -93,7 +109,8 @@ class Footer(tk.Frame):
             self._send_callback()
 
     def _draw(self):
-        save_button = tk.Button(master=self, text="Send", width=20)
+        save_button = tk.Button(master=self, text="Send", width=20,
+                                command=self.send_click)
         # You must implement this.
         # Here you must configure the button to bind its click to
         # the send_click() function.
@@ -124,13 +141,11 @@ class NewContactDialog(tk.simpledialog.Dialog):
         self.username_entry.insert(tk.END, self.user)
         self.username_entry.pack()
 
-        # You need to implement also the region for the user to enter
-        # the Password. The code is similar to the Username you see above
-        # but you will want to add self.password_entry['show'] = '*'
-        # such that when the user types, the only thing that appears are
-        # * symbols.
-        #self.password...
-
+        self.password_label = tk.Label(frame, width=30, text="Password")
+        self.password_label.pack()
+        self.password_entry = tk.Entry(frame, width=30)
+        self.password_entry.insert(tk.END, self.pwd)
+        self.password_entry.pack()
 
     def apply(self):
         self.user = self.username_entry.get()
@@ -146,7 +161,9 @@ class MainApp(tk.Frame):
         self.password = ''
         self.server = ''
         self.recipient = ''
-        # You must implement this! You must configure and
+        self.direct_messenger = ''
+        # You must implement this!
+        # You must configure and
         # instantiate your DirectMessenger instance after this line.
         #self.direct_messenger = ... continue!
 
@@ -157,25 +174,97 @@ class MainApp(tk.Frame):
         self.body.insert_contact("studentexw23") # adding one example student.
 
     def send_message(self):
-        # You must implement this!
-        pass
+        msg = self.body.get_text_entry()
+        if not self.direct_messenger:
+            messagebox.showerror("Disconnected", "Not connnected to a server!")
+        elif not self.recipient:
+            messagebox.showerror("No Recipient", "No recipient selected!")
+        elif not msg:
+            messagebox.showerror("Empty Message", "Invalid message!")
+        else:
+            self.direct_messenger.send(msg, self.recipient)
+            self.body.insert_user_message(msg)
+            all_dms = self.direct_messenger.retrieve_all()
+            all_msgs = []
+            for dmsg in all_dms:
+                new_msg = dmsg.to_dict()
+                all_msgs.append(new_msg)
+            self.profile.save_messages([all_msgs.pop()])
+            self.profile.save_profile(f'{self.username}.dsu')
 
     def add_contact(self):
+        if not self.direct_messenger:
+            messagebox.showerror("Disconnected", "Not connnected to a server!")
+        else:
+            username = tk.simpledialog.askstring('Add Contact', 'Username...')
+            if username == self.username:
+                messagebox.showerror("Invalid Contact", "Can't add yourself as a contact!")
+                return
+            self.body.insert_contact(username)
+            self.profile.save_friends(username)
+            self.profile.save_profile(f'{self.username}.dsu')
         # You must implement this!
         # Hint: check how to use tk.simpledialog.askstring to retrieve
         # the name of the new contact, and then use one of the body
         # methods to add the contact to your contact list
-        pass
+
+    def display_recipient_messages(self):
+        all_msgs = self.profile.get_messages()
+        for msg in all_msgs:
+            if 'recipient' in msg and msg['recipient'] == self.recipient:
+                self.body.insert_user_message(msg['message'])
+            elif 'from' in msg and msg['from'] == self.recipient:
+                self.body.insert_contact_message(msg['message'])
 
     def recipient_selected(self, recipient):
         self.recipient = recipient
+        self.body.clear_messages()
+        self.display_recipient_messages()
+
 
     def configure_server(self):
         ud = NewContactDialog(self.root, "Configure Account",
                               self.username, self.password, self.server)
+        if not ud.user or not ud.pwd:
+            messagebox.showerror("No User or Password", "No username or password!")
+            return
+        elif (ud.user == self.username and ud.pwd == self.password and ud.server == self.server):
+            messagebox.showerror("Logged In Already", f"Already logged in as {self.username}!")
+            return
+
+        self.body.clear_contacts()
+        self.recipient = ''
+
         self.username = ud.user
         self.password = ud.pwd
-        self.server = ud.server
+
+        self.profile = Profile.Profile()
+        self.profile.load_profile(f'{self.username}.dsu')
+        if self.profile.username != self.username or self.profile.password != self.password:
+            messagebox.showerror("Invalid User or Password", "Invalid username or password!")
+            return
+
+        friends = self.profile.get_friends()
+        for friend in friends:
+            self.body.insert_contact(friend)
+        if ud.server and ud.server != self.server:
+            self.server = ud.server
+            self.direct_messenger = dm.DirectMessenger(self.server,
+                                                       self.username,
+                                                       self.password)
+            all_dms = self.direct_messenger.retrieve_all()
+            all_msgs = []
+            for dmsg in all_dms:
+                msg = dmsg.to_dict()
+                all_msgs.append(msg)
+            self.profile.overwrite_messages(all_msgs)
+            self.profile.save_profile(f'{self.username}.dsu')
+            self.after(2000, self.check_new)
+
+        
+                
+            
+        
         # You must implement this!
         # You must configure and instantiate your
         # DirectMessenger instance after this line.
@@ -185,19 +274,27 @@ class MainApp(tk.Frame):
         pass
 
     def check_new(self):
-        # You must implement this!
-        pass
+        if self.direct_messenger:
+            print(True)
+            all_new = self.direct_messenger.retrieve_new()
+            if all_new:
+                all_new_msgs = []
+                for new in all_new:
+                    new = new.to_dict()
+                    all_new_msgs.append(new)
+                    if new['from'] == self.recipient:
+                        self.body.insert_contact_message(new['message'])
+                    self.profile.save_messages(all_new_msgs)
+                    self.profile.save_profile(f'{self.username}.dsu')
+            print("CHECKING NEW")
+            self.after(2000, self.check_new)
+
 
     def _draw(self):
         # Build a menu and add it to the root frame.
         menu_bar = tk.Menu(self.root)
         self.root['menu'] = menu_bar
         menu_file = tk.Menu(menu_bar)
-
-        menu_bar.add_cascade(menu=menu_file, label='File')
-        menu_file.add_command(label='New')
-        menu_file.add_command(label='Open...')
-        menu_file.add_command(label='Close')
 
         settings_file = tk.Menu(menu_bar)
         menu_bar.add_cascade(menu=settings_file, label='Settings')
