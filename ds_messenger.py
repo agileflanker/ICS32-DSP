@@ -50,7 +50,7 @@ class DirectMessenger:
         '''
         Attempts to send a message to the specified recipient.
         '''
-        if self.token is None:
+        if not self.token:
             return False
         json = ds_protocol.encode_json(msg_type='directmessage',
                                        username=recipient,
@@ -67,8 +67,6 @@ class DirectMessenger:
         returns a list of DirectMessage objects containing the contents.
         Returns an error message if unsuccessful.
         '''
-        if self.token is None:
-            return None
         json = ds_protocol.encode_json(msg_type='directmessage',
                                        message='new',
                                        token=self.token).encode()
@@ -92,8 +90,6 @@ class DirectMessenger:
         successful, returns a list of DirectMessage objects. If unsuccessful,
         returns an error message.
         '''
-        if self.token is None:
-            return None
         json = ds_protocol.encode_json(msg_type='directmessage',
                                        message='all',
                                        token=self.token).encode()

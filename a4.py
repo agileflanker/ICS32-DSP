@@ -334,7 +334,6 @@ class MainApp(tk.Frame):
         self.body.clear_contacts()
         self.body.clear_messages()
         self.recipient = ''
-
         self.username = ud.user
         self.password = ud.pwd
 
@@ -355,19 +354,14 @@ class MainApp(tk.Frame):
         friends = self.profile.get_friends()
         for friend in friends:
             self.body.insert_contact(friend)
-
         if ud.server and ud.server != self.server:
-            self.direct_messenger = dm.DirectMessenger(ud.server,
+            self.server = ud.server
+            self.direct_messenger = dm.DirectMessenger(self.server,
                                                        self.username,
                                                        self.password)
-            if not self.direct_messenger:
-                return
-            self.server = ud.server
+
 
             all_dms = self.direct_messenger.retrieve_all()
-            if not all_dms:
-                return
-
             all_msgs = []
             for dmsg in all_dms:
                 if isinstance(dmsg, dm.DirectMessage):
@@ -387,17 +381,16 @@ class MainApp(tk.Frame):
         '''
         if self.direct_messenger:
             all_new = self.direct_messenger.retrieve_new()
-            if all_new:
-                all_new_msgs = []
-                for new in all_new:
-                    if isinstance(new, dm.DirectMessage):
-                        new = new.to_dict()
-                        all_new_msgs.append(new)
-                        self.body.insert_contact(new['from'])
-                        if new['from'] == self.recipient:
-                            self.body.insert_contact_message(new['message'])
-                        self.profile.save_messages(all_new_msgs)
-                        self.profile.save_profile(f'{self.username}.dsu')
+            all_new_msgs = []
+            for new in all_new:
+                if isinstance(new, dm.DirectMessage):
+                    new = new.to_dict()
+                    all_new_msgs.append(new)
+                    self.body.insert_contact(new['from'])
+                    if new['from'] == self.recipient:
+                        self.body.insert_contact_message(new['message'])
+                    self.profile.save_messages(all_new_msgs)
+                    self.profile.save_profile(f'{self.username}.dsu')
             self.after(2000, self.check_new)
 
     def _draw(self):
