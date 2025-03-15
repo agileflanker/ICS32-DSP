@@ -37,7 +37,7 @@ def extract_json(json_msg: str) -> DataTuple:
 
     except json.JSONDecodeError:
         print("Json cannot be decoded.")
-    
+
     return DataTuple(type=type, message=message, token=token)
 
 
@@ -55,7 +55,7 @@ def encode_json(msg_type: str,
     elif msg_type == 'post' or msg_type == 'bio':
         if not token or not message:
             raise ValueError("ProtocolError: No token or message")
-        msg = {"token": token, 
+        msg = {"token": token,
                msg_type: {"entry": message, "timestamp": timestamp}}
 
     elif msg_type == 'directmessage':

@@ -6,6 +6,7 @@ import socket
 import ds_protocol
 from collections import namedtuple
 
+
 class DirectMessage:
     def __init__(self):
         self.sender = None
@@ -23,6 +24,7 @@ class DirectMessage:
         msg['timestamp'] = self.timestamp
         return msg
 
+
 class DirectMessenger:
     '''
     User immediately joins the server provided a username and password
@@ -35,13 +37,13 @@ class DirectMessenger:
         self.token = None
         self.client = connect_to_server(dsuserver)
         data = join_server(self.client, username, password)
-        self.token = data.token
+        self.token = data
 
-    def send(self, message:str, recipient:str) -> bool:
+    def send(self, message: str, recipient: str) -> bool:
         json = ds_protocol.encode_json(msg_type='directmessage',
-                                        username=recipient,
-                                        message=message,
-                                        token=self.token).encode()
+                                       username=recipient,
+                                       message=message,
+                                       token=self.token).encode()
         self.client.sendall(json + b'\r\n')
         recv = ds_protocol.extract_json(self.client.recv(4096).strip())
         type = recv.type
@@ -52,8 +54,8 @@ class DirectMessenger:
 
     def retrieve_new(self) -> list:
         json = ds_protocol.encode_json(msg_type='directmessage',
-                                        message='new',
-                                        token=self.token).encode()
+                                       message='new',
+                                       token=self.token).encode()
         self.client.sendall(json + b'\r\n')
         recv = ds_protocol.extract_json(self.client.recv(4096).strip())
         if recv.type == 'ok':
@@ -68,7 +70,7 @@ class DirectMessenger:
             return new_msgs
         else:
             return recv.message
- 
+
     def retrieve_all(self) -> list:
         json = ds_protocol.encode_json(msg_type='directmessage',
                                        message='all',
@@ -84,25 +86,34 @@ class DirectMessenger:
                     dm.recipient = line['recipient']
                 else:
                     dm.sender = line['from']
-                
+
                 dm.message = line['message']
                 dm.timestamp = line['timestamp']
                 all_msgs.append(dm)
             return all_msgs
         else:
-            return None
+            return recv.message
 
-def join_server(client: socket, username: str, password: str) -> ds_protocol.DataTuple:
-        join_msg = ds_protocol.encode_json('join',
-                                           username,
-                                           password).encode()
-        client.sendall(join_msg + b'\r\n')
-        recv = client.recv(4096).decode().strip()
-        data = ds_protocol.extract_json(recv)
-        return data
+
+def join_server(client: socket,
+                username: str, password: str) -> ds_protocol.DataTuple:
+    if not client:
+        return None
+    join_msg = ds_protocol.encode_json('join',
+                                       username,
+                                       password).encode()
+    client.sendall(join_msg + b'\r\n')
+    recv = client.recv(4096).decode().strip()
+    data = ds_protocol.extract_json(recv)
+    return data.token
+
 
 def connect_to_server(server):
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect((server, 3001))
-    return client
-
+    try:
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect((server, 3001))
+        return client
+    except ConnectionRefusedError:
+        return None
+    except Exception:
+        return None

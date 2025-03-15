@@ -14,7 +14,7 @@ conversations.
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import ds_messenger as dm
-from Profile import Profile, DsuFileError
+from dsu_profile import Profile, DsuFileError
 
 
 class Body(tk.Frame):
@@ -38,10 +38,11 @@ class Body(tk.Frame):
         Updates the recipient attribute of the MainApp with the name of a
         selected contact.
         '''
-        index = int(event.widget.selection()[0])
-        entry = self._contacts[index]
-        if self._select_callback is not None:
-            self._select_callback(entry)
+        if event.widget.selection():
+            index = int(event.widget.selection()[0])
+            entry = self._contacts[index]
+            if self._select_callback is not None:
+                self._select_callback(entry)
 
     def clear_contacts(self):
         '''
@@ -254,8 +255,9 @@ class MainApp(tk.Frame):
             all_dms = self.direct_messenger.retrieve_all()
             all_msgs = []
             for dmsg in all_dms:
-                new_msg = dmsg.to_dict()
-                all_msgs.append(new_msg)
+                if type(dmsg) is dm.DirectMessage:
+                    new_msg = dmsg.to_dict()
+                    all_msgs.append(new_msg)
 
             self.profile.save_messages([all_msgs.pop()])
             self.profile.save_profile(f'{self.username}.dsu')
@@ -325,6 +327,7 @@ class MainApp(tk.Frame):
             return
 
         self.body.clear_contacts()
+        self.body.clear_messages()
         self.recipient = ''
 
         self.username = ud.user
@@ -359,8 +362,9 @@ class MainApp(tk.Frame):
             all_dms = self.direct_messenger.retrieve_all()
             all_msgs = []
             for dmsg in all_dms:
-                msg = dmsg.to_dict()
-                all_msgs.append(msg)
+                if type(dmsg) is dm.DirectMessage:
+                    msg = dmsg.to_dict()
+                    all_msgs.append(msg)
             self.profile.overwrite_messages(all_msgs)
             self.profile.save_profile(f'{self.username}.dsu')
             self.after(2000, self.check_new)
@@ -378,14 +382,14 @@ class MainApp(tk.Frame):
             if all_new:
                 all_new_msgs = []
                 for new in all_new:
-                    new = new.to_dict()
-                    all_new_msgs.append(new)
-                    self.body.insert_contact(new['from'])
-                    if new['from'] == self.recipient:
-                        self.body.insert_contact_message(new['message'])
-                    self.profile.save_messages(all_new_msgs)
-                    self.profile.save_profile(f'{self.username}.dsu')
-            print("CHECKING NEW")
+                    if type(new) is dm.DirectMessage:
+                        new = new.to_dict()
+                        all_new_msgs.append(new)
+                        self.body.insert_contact(new['from'])
+                        if new['from'] == self.recipient:
+                            self.body.insert_contact_message(new['message'])
+                        self.profile.save_messages(all_new_msgs)
+                        self.profile.save_profile(f'{self.username}.dsu')
             self.after(2000, self.check_new)
 
     def _draw(self):
