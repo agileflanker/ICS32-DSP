@@ -255,7 +255,7 @@ class MainApp(tk.Frame):
             all_dms = self.direct_messenger.retrieve_all()
             all_msgs = []
             for dmsg in all_dms:
-                if type(dmsg) is dm.DirectMessage:
+                if isinstance(dmsg, dm.DirectMessage):
                     new_msg = dmsg.to_dict()
                     all_msgs.append(new_msg)
 
@@ -362,7 +362,7 @@ class MainApp(tk.Frame):
             all_dms = self.direct_messenger.retrieve_all()
             all_msgs = []
             for dmsg in all_dms:
-                if type(dmsg) is dm.DirectMessage:
+                if isinstance(dmsg, dm.DirectMessage):
                     msg = dmsg.to_dict()
                     all_msgs.append(msg)
             self.profile.overwrite_messages(all_msgs)
@@ -382,7 +382,7 @@ class MainApp(tk.Frame):
             if all_new:
                 all_new_msgs = []
                 for new in all_new:
-                    if type(new) is dm.DirectMessage:
+                    if isinstance(new, dm.DirectMessage):
                         new = new.to_dict()
                         all_new_msgs.append(new)
                         self.body.insert_contact(new['from'])
