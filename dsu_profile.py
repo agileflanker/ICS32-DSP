@@ -14,6 +14,11 @@
 # CODE RIGHT NOW, though can you certainly take a look at it if you are curious
 # since we already covered a bit of the JSON format in class.
 
+'''
+The dsu_profile module allows a user to save their information to a DSU file or
+load information from an existing DSU file to a Profile object.
+'''
+
 import json
 import time
 from pathlib import Path
@@ -155,7 +160,6 @@ class Profile:
     def get_posts(self) -> list[Post]:
         return self._posts
 
-
     def save_messages(self, msgs: list) -> None:
         for msg in msgs:
             self._messages.append(msg)
@@ -167,18 +171,16 @@ class Profile:
     def overwrite_messages(self, msgs: list):
         self._messages = []
         self.save_messages(msgs)
-    
-    def save_friends(self, friend: str):
-        if not friend in self._friends:
-            self._friends.append(friend)
 
+    def save_friends(self, friend: str):
+        if friend not in self._friends:
+            self._friends.append(friend)
 
     def get_messages(self) -> list:
         return self._messages
-    
+
     def get_friends(self) -> list:
         return self._friends
-
 
     """
 
@@ -194,7 +196,6 @@ class Profile:
 
     """
     def save_profile(self, path: str) -> None:
-        
         p = Path(path)
         p.touch()
 
@@ -221,7 +222,8 @@ class Profile:
     Raises DsuProfileError, DsuFileError
 
     """
-    def load_profile(self, path: str) -> None:
+    def load_profile(self, path: str,
+                     username=None, password=None, dsuserver=None) -> None:
         p = Path(path)
 
         if p.exists() and p.suffix == '.dsu':
@@ -240,6 +242,7 @@ class Profile:
                     self._messages.append(msg_obj)
 
                 f.close()
+
             except Exception as ex:
                 raise DsuProfileError(ex)
         else:
