@@ -250,7 +250,12 @@ class MainApp(tk.Frame):
         elif not msg:
             messagebox.showerror("Empty Message", "Invalid message!")
         else:
-            self.direct_messenger.send(msg, self.recipient)
+            status = self.direct_messenger.send(msg, self.recipient)
+            if status is False:
+                messagebox.showerror("Disconnected", "Not connnected to a "
+                                     "server!")
+                return
+
             self.body.insert_user_message(msg)
             all_dms = self.direct_messenger.retrieve_all()
             all_msgs = []
@@ -360,6 +365,9 @@ class MainApp(tk.Frame):
             self.server = ud.server
 
             all_dms = self.direct_messenger.retrieve_all()
+            if not all_dms:
+                return
+
             all_msgs = []
             for dmsg in all_dms:
                 if isinstance(dmsg, dm.DirectMessage):
