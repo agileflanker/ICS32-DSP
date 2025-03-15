@@ -1,16 +1,29 @@
 # Andrew Ngo
 # azngo@uci.edu
 # 63263981
-
+'''
+GUI for the ICS32 DSP.
+Users can send and receive messages from valid users in the DSP server by first
+joining a server and entering a username and password. If an existing profile
+is associated with the username and password entered saved in a DSU File, the
+user's information such as contacts and all messages will be loaded.
+A user can only send and receive messages and add new contacts if they are
+connected to a DSU server, otherwise they will only be able to view saved
+conversations.
+'''
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-from typing import Text
+from tkinter import ttk, messagebox, simpledialog
 import ds_messenger as dm
-import Profile
+from Profile import Profile, DsuFileError
 
 
 class Body(tk.Frame):
-    def __init__(self, root, recipient_selected_callback=None):
+    '''
+    Creates the main body of the GUI with a Treeview object for all contacts,
+    a Text object to display conversations, and an Entry object to collect user
+    input.
+    '''
+    def __init__(self, root, recipient_selected_callback: callable = None):
         tk.Frame.__init__(self, root)
         self.root = root
         self._contacts = [str]
@@ -21,43 +34,76 @@ class Body(tk.Frame):
         self._draw()
 
     def node_select(self, event):
-        index = int(self.posts_tree.selection()[0])
+        '''
+        Updates the recipient attribute of the MainApp with the name of a
+        selected contact.
+        '''
+        index = int(event.widget.selection()[0])
         entry = self._contacts[index]
         if self._select_callback is not None:
             self._select_callback(entry)
 
     def clear_contacts(self):
+        '''
+        Clears the Treeview of all contacts
+        '''
         if self._contacts or len(self.posts_tree.get_children()) != 0:
             self._contacts = []
             for item in self.posts_tree.get_children():
                 self.posts_tree.delete(item)
 
     def insert_contact(self, contact: str):
+        '''
+        Adds a new contact to the Treeview if the contact's username isn't
+        found in the contacts list.
+        '''
         if not contact:
             messagebox.showerror("Invalid Contact", "Invalid contact entered!")
         elif contact not in self._contacts:
             self._contacts.append(contact)
-            id = len(self._contacts) - 1
-            self._insert_contact_tree(id, contact)
+            contact_id = len(self._contacts) - 1
+            self._insert_contact_tree(contact_id, contact)
 
-    def _insert_contact_tree(self, id, contact: str):
+    def _insert_contact_tree(self, contact_id: int, contact: str):
         if len(contact) > 25:
-            entry = contact[:24] + "..."
-        id = self.posts_tree.insert('', id, id, text=contact)
+            contact = contact[:24] + "..."
+        contact_id = self.posts_tree.insert('',
+                                            contact_id,
+                                            contact_id,
+                                            text=contact)
 
     def insert_user_message(self, message: str):
+        '''
+        Inserts a message sent by the user to the right-side of
+        the conversation box.
+        '''
         self.entry_editor.insert(1.0, message + '\n', 'entry-right')
 
     def insert_contact_message(self, message: str):
+        '''
+        Inserts a message received by the user to the left-side of
+        the conversation box.
+        '''
         self.entry_editor.insert(1.0, message + '\n', 'entry-left')
 
     def clear_messages(self):
+        '''
+        Clears the conversation box of all messages
+        '''
         self.entry_editor.delete(1.0, tk.END)
 
     def get_text_entry(self) -> str:
+        '''
+        Returns a string of the current message entered by the user in the
+        entry box.
+        '''
         return self.message_editor.get('1.0', 'end').rstrip()
 
     def set_text_entry(self, text: str):
+        '''
+        Clears the entry box of all messages, then sets it to the specified
+        value.
+        '''
         self.message_editor.delete(1.0, tk.END)
         self.message_editor.insert(1.0, text)
 
@@ -100,6 +146,10 @@ class Body(tk.Frame):
 
 
 class Footer(tk.Frame):
+    '''
+    Configures the layout of the Send button for sending user messages and
+    displays the status of the DSP program in the bottom-left.
+    '''
     def __init__(self, root, send_callback=None):
         tk.Frame.__init__(self, root)
         self.root = root
@@ -107,6 +157,9 @@ class Footer(tk.Frame):
         self._draw()
 
     def send_click(self):
+        '''
+        Calls the function notifying that the Send button was clicked.
+        '''
         if self._send_callback is not None:
             self._send_callback()
 
@@ -122,30 +175,38 @@ class Footer(tk.Frame):
         self.footer_label.pack(fill=tk.BOTH, side=tk.LEFT, padx=5)
 
 
-class NewContactDialog(tk.simpledialog.Dialog):
-    def __init__(self, root, title=None, user=None, pwd=None, server=None):
+class NewContactDialog(simpledialog.Dialog):
+    '''
+    Creates a pop-out window when the user logs in to the program by cliking
+    Settings -> Configure DS Server in the Menu bar.
+    Prompts the user for an IP address, username, and password.
+    '''
+    def __init__(self, root, user=None, pwd=None, server=None):
         self.root = root
         self.server = server
         self.user = user
         self.pwd = pwd
-        super().__init__(root, title)
+        super().__init__(root, "Configure Account")
 
-    def body(self, frame):
-        self.server_label = tk.Label(frame, width=30, text="DS Server Address")
-        self.server_label.pack()
-        self.server_entry = tk.Entry(frame, width=30)
+    def body(self, master):
+        '''
+        Configures the layout of the pop-out window.
+        '''
+        server_label = tk.Label(master, width=30, text="DS Server Address")
+        server_label.pack()
+        self.server_entry = tk.Entry(master, width=30)
         self.server_entry.insert(tk.END, self.server)
         self.server_entry.pack()
 
-        self.username_label = tk.Label(frame, width=30, text="Username")
-        self.username_label.pack()
-        self.username_entry = tk.Entry(frame, width=30)
+        username_label = tk.Label(master, width=30, text="Username")
+        username_label.pack()
+        self.username_entry = tk.Entry(master, width=30)
         self.username_entry.insert(tk.END, self.user)
         self.username_entry.pack()
 
-        self.password_label = tk.Label(frame, width=30, text="Password")
-        self.password_label.pack()
-        self.password_entry = tk.Entry(frame, width=30)
+        password_label = tk.Label(master, width=30, text="Password")
+        password_label.pack()
+        self.password_entry = tk.Entry(master, width=30)
         self.password_entry.insert(tk.END, self.pwd)
         self.password_entry['show'] = '*'
         self.password_entry.pack()
@@ -157,6 +218,9 @@ class NewContactDialog(tk.simpledialog.Dialog):
 
 
 class MainApp(tk.Frame):
+    '''
+    Initializes and configures functionality for the main window of the GUI.
+    '''
     def __init__(self, root):
         tk.Frame.__init__(self, root)
         self.root = root
@@ -172,6 +236,11 @@ class MainApp(tk.Frame):
         self._draw()
 
     def send_message(self):
+        '''
+        If connected to a DSU server and a contact is selected, sends a
+        non-empty message to the contact. Otherwise, creates a pop-up menu
+        displaying an error message if unable to send.
+        '''
         msg = self.body.get_text_entry()
         if not self.direct_messenger:
             messagebox.showerror("Disconnected", "Not connnected to a server!")
@@ -194,10 +263,14 @@ class MainApp(tk.Frame):
             self.body.set_text_entry('')
 
     def add_contact(self):
+        '''
+        If connected to a DSU server, creates a pop-up window to add a user
+        to contacts.
+        '''
         if not self.direct_messenger:
             messagebox.showerror("Disconnected", "Not connnected to a server!")
         else:
-            username = tk.simpledialog.askstring('Add Contact', 'Username...')
+            username = simpledialog.askstring('Add Contact', 'Username...')
             if username == self.username:
                 messagebox.showerror("Invalid Contact",
                                      "Can't add yourself as a contact!")
@@ -211,6 +284,10 @@ class MainApp(tk.Frame):
         # methods to add the contact to your contact list
 
     def display_recipient_messages(self):
+        '''
+        Displays all saved messages for the currently selected recipient,
+        both sent and received, in the conversation box.
+        '''
         all_msgs = self.profile.get_messages()
         for msg in all_msgs:
             if 'recipient' in msg and msg['recipient'] == self.recipient:
@@ -219,20 +296,30 @@ class MainApp(tk.Frame):
                 self.body.insert_contact_message(msg['message'])
 
     def recipient_selected(self, recipient):
+        '''
+        Updates the currently selected recipient when the user clicks a contact
+        in the contacts list.
+        '''
         self.recipient = recipient
         self.body.clear_messages()
         self.display_recipient_messages()
 
     def configure_server(self):
-        ud = NewContactDialog(self.root, "Configure Account",
+        '''
+        Creates a pop-up menu prompting the user to log in to a profile.
+        If the username/password is associated with a saved DSU file, loads the
+        saved profile. Otherwise, creates a new profile and associating DSU
+        storage file.
+        Attempts to connect to the DSU server provided.
+        '''
+        ud = NewContactDialog(self.root,
                               self.username, self.password, self.server)
         if not ud.user or not ud.pwd:
             messagebox.showerror("No User or Password",
                                  "No username or password!")
             return
-        elif (ud.user == self.username
-              and ud.pwd == self.password
-              and ud.server == self.server):
+        if ud.user == self.username and (ud.pwd == self.password
+                                         and ud.server == self.server):
             messagebox.showerror("Logged In Already",
                                  f"Already logged in as {self.username}!")
             return
@@ -243,13 +330,14 @@ class MainApp(tk.Frame):
         self.username = ud.user
         self.password = ud.pwd
 
-        self.profile = Profile.Profile(self.server,
-                                       self.username,
-                                       self.password)
+        self.profile = Profile(self.server,
+                               self.username,
+                               self.password)
         try:
             self.profile.load_profile(f'{self.username}.dsu')
-        except Profile.DsuFileError as dfe:
+        except DsuFileError:
             self.profile.save_profile(f'{self.username}.dsu')
+
         if not (self.profile.username == self.username
                 and self.profile.password == self.password):
             messagebox.showerror("Invalid User or Password",
@@ -259,11 +347,15 @@ class MainApp(tk.Frame):
         friends = self.profile.get_friends()
         for friend in friends:
             self.body.insert_contact(friend)
+
         if ud.server and ud.server != self.server:
-            self.server = ud.server
-            self.direct_messenger = dm.DirectMessenger(self.server,
+            self.direct_messenger = dm.DirectMessenger(ud.server,
                                                        self.username,
                                                        self.password)
+            if not self.direct_messenger:
+                return
+            self.server = ud.server
+
             all_dms = self.direct_messenger.retrieve_all()
             all_msgs = []
             for dmsg in all_dms:
@@ -274,6 +366,13 @@ class MainApp(tk.Frame):
             self.after(2000, self.check_new)
 
     def check_new(self):
+        '''
+        The program continuously checks for new messages sent to the user every
+        2 seconds. If the user receives a message from a contact not already in
+        the contacts list, the new contact is saved to the user's list of
+        friends and inserted into the contacts list. If the user receives a
+        message from the currently selected contact, displays the new message.
+        '''
         if self.direct_messenger:
             all_new = self.direct_messenger.retrieve_new()
             if all_new:
@@ -293,7 +392,6 @@ class MainApp(tk.Frame):
         # Build a menu and add it to the root frame.
         menu_bar = tk.Menu(self.root)
         self.root['menu'] = menu_bar
-        menu_file = tk.Menu(menu_bar)
 
         settings_file = tk.Menu(menu_bar)
         menu_bar.add_cascade(menu=settings_file, label='Settings')
@@ -341,8 +439,8 @@ if __name__ == "__main__":
     # behavior of the window changes.
     main.update()
     main.minsize(main.winfo_width(), main.winfo_height())
-    id = main.after(2000, app.check_new)
-    print(id)
+    app_id = main.after(2000, app.check_new)
+    print(app_id)
     # And finally, start up the event loop for the program (you can find
     # more on this in lectures of week 9 and 10).
     main.mainloop()
